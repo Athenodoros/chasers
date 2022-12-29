@@ -1,13 +1,27 @@
+import { Renderer } from "./renderer";
+import { ChaserSimulation } from "./simulation";
 import "./style.css";
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite and TypeScript logos to learn more
-    </p>
-  </div>
-`;
+const renderer = new Renderer();
+const simulation = new ChaserSimulation(renderer.viewport);
+renderer.updateCanvasFrame(0, simulation.list);
+
+let previous = -1;
+const getAnimationFrame = (timestamp: number) => {
+    // Update Time-Tracking
+    if (previous < 0) previous = timestamp;
+    const dt = Math.min((timestamp - previous) / 1000, 0.02);
+    previous = timestamp;
+
+    simulation.update(dt, renderer.getImageData(), renderer.dpr);
+    renderer.updateCanvasFrame(dt, simulation.list);
+
+    // Re-Enter Loop
+    window.requestAnimationFrame(getAnimationFrame);
+};
+
+window.requestAnimationFrame(getAnimationFrame);
+
+// Debugging
+(window as any).renderer = renderer;
+(window as any).simulation = simulation;
