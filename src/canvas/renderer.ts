@@ -1,5 +1,5 @@
-import { Vector2 } from "./maths";
-import { Chaser } from "./types";
+import { Vector2 } from "../utils/maths";
+import { Chaser } from "../utils/types";
 
 const BACKGROUND = "#0a091a";
 const WHITE = "#e0e7ff";
@@ -10,9 +10,9 @@ export class Renderer {
     public viewport: Vector2;
     public dpr: number;
 
-    constructor() {
+    constructor(canvas: HTMLCanvasElement) {
         // Set up canvas and draw context
-        this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
+        this.canvas = canvas;
         this.ctx = this.canvas.getContext("2d")!;
 
         this.viewport = new Vector2(window.innerWidth, innerHeight);

@@ -1,16 +1,15 @@
-import { Vector2 } from "./maths";
-import { Chaser } from "./types";
+import { Vector2 } from "../utils/maths";
+import { Chaser } from "../utils/types";
 
-const CHASER_COUNT = 2000;
-const CHASER_SPEED = 3;
+const CHASER_SPEED = 5;
 const TURN_SPEED = 10;
 
-export class ChaserSimulation {
+export class Simulation {
     public list: Chaser[];
     public bounds: Vector2;
 
-    constructor(bounds: Vector2) {
-        this.list = [...Array(CHASER_COUNT)].map(() => {
+    constructor(count: number, bounds: Vector2) {
+        this.list = [...Array(count)].map(() => {
             const position = Vector2.random(Math.sqrt(Math.random()) * Math.min(bounds.x, bounds.y) * 0.4).plus(
                 new Vector2(bounds.x / 2, bounds.y / 2)
             );
@@ -28,13 +27,13 @@ export class ChaserSimulation {
             const { position, heading } = chaser;
             chaser.previous = position;
 
-            const center = sampleDataAtLocation(position.plus(Vector2.radial(heading, 20)), data, dpr);
-            const left = sampleDataAtLocation(position.plus(Vector2.radial(heading + Math.PI / 3, 20)), data, dpr);
-            const right = sampleDataAtLocation(position.plus(Vector2.radial(heading - Math.PI / 3, 20)), data, dpr);
+            const center = sampleDataAtLocation(position.plus(Vector2.radial(heading, 50)), data, dpr);
+            const left = sampleDataAtLocation(position.plus(Vector2.radial(heading + Math.PI / 3, 50)), data, dpr);
+            const right = sampleDataAtLocation(position.plus(Vector2.radial(heading - Math.PI / 3, 50)), data, dpr);
 
             if (center > left && center > right) {
-            } else if (left >= center && left >= right) chaser.heading += Math.random() * TURN_SPEED * dt;
-            else if (right >= center && right >= left) chaser.heading -= Math.random() * TURN_SPEED * dt;
+            } else if (left >= center && left >= right) chaser.heading += (Math.random() + 0.5) * TURN_SPEED * dt;
+            else if (right >= center && right >= left) chaser.heading -= (Math.random() + 0.5) * TURN_SPEED * dt;
 
             chaser.position = chaser.position
                 .plus(Vector2.radial(chaser.heading, CHASER_SPEED))
