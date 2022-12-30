@@ -15,7 +15,7 @@ export class Renderer {
         this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
         this.ctx = this.canvas.getContext("2d")!;
 
-        this.viewport = { x: window.innerWidth, y: innerHeight };
+        this.viewport = new Vector2(window.innerWidth, innerHeight);
 
         // Set up scaling
         this.dpr = window.devicePixelRatio || 1;
@@ -32,8 +32,7 @@ export class Renderer {
     }
 
     private resizeCanvas() {
-        this.viewport.x = window.innerWidth;
-        this.viewport.y = window.innerHeight;
+        this.viewport = new Vector2(window.innerWidth, window.innerHeight);
 
         // Cache everything on temporary canvas
         const copyProjectileCanvas = getCanvasCopy(this.canvas, this.dpr);
