@@ -2,8 +2,8 @@ import { Vector2 } from "./maths";
 import { Chaser } from "./types";
 
 const CHASER_COUNT = 2000;
-const CHASER_SPEED = 4;
-const TURN_SPEED = 20;
+const CHASER_SPEED = 3;
+const TURN_SPEED = 10;
 
 export class ChaserSimulation {
     public list: Chaser[];
@@ -32,7 +32,7 @@ export class ChaserSimulation {
             const left = sampleDataAtLocation(position.plus(Vector2.radial(heading + Math.PI / 3, 20)), data, dpr);
             const right = sampleDataAtLocation(position.plus(Vector2.radial(heading - Math.PI / 3, 20)), data, dpr);
 
-            if (center >= left && center >= right) {
+            if (center > left && center > right) {
             } else if (left >= center && left >= right) chaser.heading += Math.random() * TURN_SPEED * dt;
             else if (right >= center && right >= left) chaser.heading -= Math.random() * TURN_SPEED * dt;
 
@@ -43,17 +43,20 @@ export class ChaserSimulation {
     }
 }
 
+const positions = [-2, -1, 0, 1, 2].flatMap((dx) => [-2, -1, 0, 1, 2].map((dy) => [dx, dy] as [number, number]));
+
 const sampleDataAtLocation = (position: Vector2, data: ImageData, dpr: number) => {
+    const px = Math.round(position.x);
+    const py = Math.round(position.y);
+
     return (
-        [-2, -1, 0, 1, 2]
-            .flatMap((dx) =>
-                [-2, -1, 0, 1, 2].map((dy) => {
-                    const x = Math.round(position.x) + dx;
-                    const y = Math.round(position.y) + dy;
-                    if (x <= 0 || x >= data.width / dpr - 1 || y <= 0 || y >= data.height / dpr - 1) return -100;
-                    return data.data[(y * data.width + x) * 4 * dpr];
-                })
-            )
+        positions
+            .map(([dx, dy]) => {
+                const x = dx + px;
+                const y = dy + py;
+                if (x <= 2 || x >= data.width / dpr - 3 || y <= 2 || y >= data.height / dpr - 3) return -100;
+                return data.data[(y * data.width + x) * 4 * dpr];
+            })
             .reduce((acc, val) => acc + val, 0) *
         (Math.random() / 10 + 0.95)
     );
