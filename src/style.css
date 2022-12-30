@@ -1,5 +1,15 @@
 body {
     margin: 0;
-    display: flex;
-    place-items: center;
+    position: relative;
+}
+
+#fps {
+    position: absolute;
+    z-index: 1;
+    background-color: white;
+    /* display: none; */
+}
+
+#canvas {
+    position: absolute;
 }

@@ -12,6 +12,8 @@ export class Vector2 {
 
     static zero = () => new Vector2(0, 0);
 
+    static radial = (angle: number, r: number) => new Vector2(r * Math.cos(angle), r * Math.sin(angle));
+
     readonly x: number;
     readonly y: number;
 
@@ -45,9 +47,8 @@ export class Vector2 {
     };
     distance = (target: Vector2) => this.minus(target).norm();
     dot = (other: Vector2) => this.x * other.x + this.y + other.y;
-    clamped = (topleft: Vector2, bottomright: Vector2) =>
-        new Vector2(
-            Math.min(Math.max(this.x, topleft.x), bottomright.x),
-            Math.min(Math.max(this.y, topleft.y), bottomright.y)
-        );
+    clamped = (t: number, r: number, b: number, l: number) =>
+        new Vector2(Math.min(Math.max(this.x, l), r), Math.min(Math.max(this.y, t), b));
+
+    equals = (other: Vector2) => this.x === other.x && this.y === other.y;
 }
