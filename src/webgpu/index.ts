@@ -5,6 +5,10 @@ export const runWebGPU = async (canvas: HTMLCanvasElement) => {
     canvas.height = 600;
 
     const renderer = await Runner.from(canvas);
-    renderer.render();
-    // requestAnimationFrame(() => renderer.render());
+
+    const render = () => {
+        renderer.render();
+        requestAnimationFrame(render);
+    };
+    render();
 };

@@ -10,6 +10,8 @@ export class Runner {
     computer: ComputeShader;
     texturer: TextureRendererShader;
 
+    uniformBuffer: GPUBuffer;
+
     static async from(canvas: HTMLCanvasElement) {
         const adapter = await navigator.gpu?.requestAdapter();
         const device = await adapter?.requestDevice();
@@ -36,6 +38,10 @@ export class Runner {
             usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
         });
         const colour_buffer_view = colour_buffer.createView();
+        this.uniformBuffer = this.device.createBuffer({
+            size: 64,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
 
         // Shader Handlers
         this.computer = new ComputeShader(
@@ -52,14 +58,26 @@ export class Runner {
                         viewDimension: "2d",
                     },
                 },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: {},
+                },
             ],
-            [{ binding: 0, resource: colour_buffer_view }]
+            [
+                { binding: 0, resource: colour_buffer_view },
+                { binding: 1, resource: { buffer: this.uniformBuffer } },
+            ]
         );
 
         this.texturer = new TextureRendererShader(this.device, colour_buffer_view);
     }
 
+    time: number = new Date().valueOf();
     render = () => {
+        const array = new Float32Array([((new Date().valueOf() - this.time) / 1000) * Math.PI * 2]);
+        this.device.queue.writeBuffer(this.uniformBuffer, 0, array);
+
         const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();
 
         this.computer.render(commandEncoder, this.canvas.width, this.canvas.height);

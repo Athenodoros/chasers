@@ -1,4 +1,5 @@
 @group(0) @binding(0) var colour_buffer: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(1) var<uniform> timestamp: Timestamp;
 
 struct Sphere {
     center: vec3<f32>,
@@ -8,6 +9,10 @@ struct Sphere {
 struct Ray {
     direction: vec3<f32>,
     origin: vec3<f32>,
+}
+
+struct Timestamp {
+    dt: f32,
 }
 
 @compute @workgroup_size(1,1,1)
@@ -29,7 +34,7 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     ray.direction = normalize(forwards + horizontal_coefficient * right + vertical_coefficient * up);
     ray.origin = vec3<f32>(0.0, 0.0, 0.0);
 
-    var pixel_colour: vec3<f32> = vec3<f32>(0.5, 0.0, 0.25);
+    var pixel_colour: vec3<f32> = vec3<f32>(sin(timestamp.dt) * 0.5 + 0.5, 0.0, 0.25);
 
     if (hit(ray, sphere)) {
         pixel_colour = vec3<f32>(0.5, 1.0, 0.75);
