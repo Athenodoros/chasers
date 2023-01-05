@@ -16,11 +16,9 @@ export class Renderer {
     colour_buffer_view!: GPUTextureView;
     sampler!: GPUSampler;
 
-    // Pipeline Objects
-    ray_tracing_pipeline!: GPUComputePipeline;
-    ray_tracing_bind_group!: GPUBindGroup;
-    screen_pipeline!: GPURenderPipeline;
-    screen_bind_group!: GPUBindGroup;
+    // Shader Handlers
+    computer!: ComputeShader;
+    texturer!: TextureRendererShader;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -29,7 +27,7 @@ export class Renderer {
     async Initialize() {
         await this.setupDevice();
         await this.createAssets();
-        await this.makePipeline();
+        this.initialiseShaderHandlers();
         this.render();
     }
 
@@ -50,9 +48,12 @@ export class Renderer {
         });
     }
 
-    async makePipeline() {
-        const ray_tracing_bind_group_layout = this.device.createBindGroupLayout({
-            entries: [
+    initialiseShaderHandlers() {
+        this.computer = new ComputeShader(
+            this.device,
+            raytracer_kernel,
+            "main",
+            [
                 {
                     binding: 0,
                     visibility: GPUShaderStage.COMPUTE,
@@ -63,25 +64,12 @@ export class Renderer {
                     },
                 },
             ],
-        });
-        this.ray_tracing_bind_group = this.device.createBindGroup({
-            layout: ray_tracing_bind_group_layout,
-            entries: [{ binding: 0, resource: this.colour_buffer_view }],
-        });
+            [{ binding: 0, resource: this.colour_buffer_view }]
+        );
 
-        const ray_tracing_pipeline_layout = this.device.createPipelineLayout({
-            bindGroupLayouts: [ray_tracing_bind_group_layout],
-        });
-        this.ray_tracing_pipeline = this.device.createComputePipeline({
-            layout: ray_tracing_pipeline_layout,
-            compute: {
-                module: this.device.createShaderModule({ code: raytracer_kernel }),
-                entryPoint: "main",
-            },
-        });
-
-        const screen_bind_group_layout = this.device.createBindGroupLayout({
-            entries: [
+        this.texturer = new TextureRendererShader(
+            this.device,
+            [
                 {
                     binding: 0,
                     visibility: GPUShaderStage.FRAGMENT,
@@ -93,33 +81,11 @@ export class Renderer {
                     texture: {},
                 },
             ],
-        });
-        this.screen_bind_group = this.device.createBindGroup({
-            layout: screen_bind_group_layout,
-            entries: [
+            [
                 { binding: 0, resource: this.sampler },
                 { binding: 1, resource: this.colour_buffer_view },
-            ],
-        });
-
-        const screen_pipeline_layout = this.device.createPipelineLayout({
-            bindGroupLayouts: [screen_bind_group_layout],
-        });
-        this.screen_pipeline = this.device.createRenderPipeline({
-            layout: screen_pipeline_layout,
-            vertex: {
-                module: this.device.createShaderModule({ code: screen_shader }),
-                entryPoint: "vert_main",
-            },
-            fragment: {
-                module: this.device.createShaderModule({ code: screen_shader }),
-                entryPoint: "frag_main",
-                targets: [{ format: "bgra8unorm" }],
-            },
-            primitive: {
-                topology: "triangle-list",
-            },
-        });
+            ]
+        );
     }
 
     async createAssets() {
@@ -144,31 +110,80 @@ export class Renderer {
     render = () => {
         const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();
 
-        const ray_tracer_pass = commandEncoder.beginComputePass();
-        ray_tracer_pass.setPipeline(this.ray_tracing_pipeline);
-        ray_tracer_pass.setBindGroup(0, this.ray_tracing_bind_group);
-        ray_tracer_pass.dispatchWorkgroups(this.canvas.width, this.canvas.height, 1);
-        ray_tracer_pass.end();
+        this.computer.render(commandEncoder, this.canvas.width, this.canvas.height);
 
         const textureView: GPUTextureView = this.context.getCurrentTexture().createView();
-
-        const renderpass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
-            colorAttachments: [
-                {
-                    view: textureView,
-                    clearValue: { r: 0.5, g: 0.0, b: 0.25, a: 1.0 },
-                    loadOp: "clear",
-                    storeOp: "store",
-                },
-            ],
-        });
-        renderpass.setPipeline(this.screen_pipeline);
-        renderpass.setBindGroup(0, this.screen_bind_group);
-        renderpass.draw(6, 1, 0, 0);
-        renderpass.end();
+        this.texturer.render(commandEncoder, textureView);
 
         this.device.queue.submit([commandEncoder.finish()]);
 
         requestAnimationFrame(this.render);
+    };
+}
+
+class ComputeShader {
+    pipeline: GPUComputePipeline;
+    bind_group: GPUBindGroup;
+
+    constructor(
+        device: GPUDevice,
+        code: string,
+        entryPoint: string,
+        layouts: Iterable<GPUBindGroupLayoutEntry>,
+        entries: Iterable<GPUBindGroupEntry>
+    ) {
+        const bind_group_layout = device.createBindGroupLayout({ entries: layouts });
+        this.bind_group = device.createBindGroup({ layout: bind_group_layout, entries });
+
+        const pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [bind_group_layout] });
+        this.pipeline = device.createComputePipeline({
+            layout: pipeline_layout,
+            compute: { module: device.createShaderModule({ code }), entryPoint },
+        });
+    }
+
+    render = (commandEncoder: GPUCommandEncoder, x: number, y: number, z: number = 1) => {
+        const compute_pass = commandEncoder.beginComputePass();
+        compute_pass.setPipeline(this.pipeline);
+        compute_pass.setBindGroup(0, this.bind_group);
+        compute_pass.dispatchWorkgroups(x, y, z);
+        compute_pass.end();
+    };
+}
+
+class TextureRendererShader {
+    pipeline: GPURenderPipeline;
+    bind_group: GPUBindGroup;
+
+    constructor(device: GPUDevice, layouts: Iterable<GPUBindGroupLayoutEntry>, entries: Iterable<GPUBindGroupEntry>) {
+        const bind_group_layout = device.createBindGroupLayout({ entries: layouts });
+        this.bind_group = device.createBindGroup({ layout: bind_group_layout, entries });
+
+        const pipeline_layout = device.createPipelineLayout({ bindGroupLayouts: [bind_group_layout] });
+        this.pipeline = device.createRenderPipeline({
+            layout: pipeline_layout,
+            vertex: {
+                module: device.createShaderModule({ code: screen_shader }),
+                entryPoint: "vert_main",
+            },
+            fragment: {
+                module: device.createShaderModule({ code: screen_shader }),
+                entryPoint: "frag_main",
+                targets: [{ format: "bgra8unorm" }],
+            },
+            primitive: {
+                topology: "triangle-list",
+            },
+        });
+    }
+
+    render = (commandEncoder: GPUCommandEncoder, textureView: GPUTextureView) => {
+        const renderpass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [{ view: textureView, loadOp: "clear", storeOp: "store" }],
+        });
+        renderpass.setPipeline(this.pipeline);
+        renderpass.setBindGroup(0, this.bind_group);
+        renderpass.draw(6, 1, 0, 0);
+        renderpass.end();
     };
 }
