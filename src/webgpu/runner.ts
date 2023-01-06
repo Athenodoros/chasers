@@ -42,6 +42,32 @@ export class Runner {
             size: 64,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
+        const chaserBuffer = this.device.createBuffer({
+            size: 16 * 4, // Blocks round up to multiple of 16 (from 2 * 4 + 4), 4 chasers to start
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(
+            chaserBuffer,
+            0,
+            new Float32Array([
+                canvas.width / 2 + canvas.height / 4,
+                canvas.height / 2,
+                0.0,
+                0.0,
+                canvas.width / 2,
+                canvas.height / 2 + canvas.height / 4,
+                0.0,
+                0.0,
+                canvas.width / 2 - canvas.height / 4,
+                canvas.height / 2,
+                0.0,
+                0.0,
+                canvas.width / 2,
+                canvas.height / 2 - canvas.height / 4,
+                0.0,
+                0.0,
+            ])
+        );
 
         // Shader Handlers
         this.computer = new ComputeShader(
@@ -63,10 +89,19 @@ export class Runner {
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: {},
                 },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: {
+                        type: "read-only-storage",
+                        hasDynamicOffset: false,
+                    },
+                },
             ],
             [
                 { binding: 0, resource: colour_buffer_view },
                 { binding: 1, resource: { buffer: this.uniformBuffer } },
+                { binding: 2, resource: { buffer: chaserBuffer } },
             ]
         );
 
