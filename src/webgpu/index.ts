@@ -6,8 +6,12 @@ export const runWebGPU = async (canvas: HTMLCanvasElement) => {
 
     const renderer = await Runner.from(canvas);
 
+    let previous = new Date().valueOf();
     const render = () => {
-        renderer.render();
+        let next = new Date().valueOf();
+        renderer.render(next - previous);
+        previous = next;
+
         requestAnimationFrame(render);
     };
     render();

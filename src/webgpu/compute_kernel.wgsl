@@ -15,10 +15,18 @@ struct ChaserData {
     chasers: array<Chaser>,
 }
 
+const background = vec4<f32>(10, 9, 26, 1);
+
 @compute @workgroup_size(1,1,1)
 fn draw_background(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let screen_pos: vec2<i32> = vec2<i32>(i32(GlobalInvocationID.x), i32(GlobalInvocationID.y));
     let pixel_colour: vec3<f32> = vec3<f32>(sin(timestamp.dt) * 0.5 + 0.5, 0.0, 0.25);
+
+    // let previous = textureLoad(colour_buffer, screen_pos);
+
+    // let alpha = pow(0.1, timestamp.dt);
+    // let pixel_colour: vec4<f32> = alpha * previous + (1 - alpha) * background;
+
     textureStore(colour_buffer, screen_pos, vec4<f32>(pixel_colour, 1.0));
 }
 
