@@ -1,5 +1,5 @@
 import { ComputeShader } from "./computer";
-import raytracer_kernel from "./raytracer_kernel.wgsl";
+import compute_kernel from "./compute_kernel.wgsl";
 import { TextureRendererShader } from "./renderer";
 
 export class Runner {
@@ -7,7 +7,8 @@ export class Runner {
     device: GPUDevice;
     context: GPUCanvasContext;
 
-    computer: ComputeShader;
+    background_computer: ComputeShader;
+    chaser_computer: ComputeShader;
     texturer: TextureRendererShader;
 
     uniformBuffer: GPUBuffer;
@@ -70,10 +71,10 @@ export class Runner {
         );
 
         // Shader Handlers
-        this.computer = new ComputeShader(
+        this.background_computer = new ComputeShader(
             this.device,
-            raytracer_kernel,
-            "main",
+            compute_kernel,
+            "draw_background",
             [
                 {
                     binding: 0,
@@ -93,7 +94,42 @@ export class Runner {
                     binding: 2,
                     visibility: GPUShaderStage.COMPUTE,
                     buffer: {
-                        type: "read-only-storage",
+                        type: "storage",
+                        hasDynamicOffset: false,
+                    },
+                },
+            ],
+            [
+                { binding: 0, resource: colour_buffer_view },
+                { binding: 1, resource: { buffer: this.uniformBuffer } },
+                { binding: 2, resource: { buffer: chaserBuffer } },
+            ]
+        );
+
+        this.chaser_computer = new ComputeShader(
+            this.device,
+            compute_kernel,
+            "draw_points",
+            [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.COMPUTE,
+                    storageTexture: {
+                        access: "write-only",
+                        format: "rgba8unorm",
+                        viewDimension: "2d",
+                    },
+                },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: {},
+                },
+                {
+                    binding: 2,
+                    visibility: GPUShaderStage.COMPUTE,
+                    buffer: {
+                        type: "storage",
                         hasDynamicOffset: false,
                     },
                 },
@@ -115,7 +151,8 @@ export class Runner {
 
         const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();
 
-        this.computer.render(commandEncoder, this.canvas.width, this.canvas.height);
+        this.background_computer.render(commandEncoder, this.canvas.width, this.canvas.height);
+        this.chaser_computer.render(commandEncoder, 4);
         this.texturer.render(commandEncoder, this.context.getCurrentTexture().createView());
 
         this.device.queue.submit([commandEncoder.finish()]);
