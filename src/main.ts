@@ -5,6 +5,6 @@ import { WebGPUSimulation } from "./webgpu";
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-const simulation = await WebGPUSimulation.from(200, canvas);
+const simulation = await WebGPUSimulation.from(200_000, canvas);
 runSimulationInLoop(simulation);
 (window as any).simulation = simulation;

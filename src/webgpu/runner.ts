@@ -16,13 +16,13 @@ export class Runner {
 
     uniformBuffer: GPUBuffer;
 
-    static async from(canvas: HTMLCanvasElement, chasers: number = 1000) {
+    static async from(canvas: HTMLCanvasElement, thousands: number) {
         const adapter = await navigator.gpu?.requestAdapter();
         const device = await adapter?.requestDevice();
 
         if (!device) throw new Error("No GPU device found!");
 
-        return new Runner(canvas, device, chasers);
+        return new Runner(canvas, device, thousands * 1000);
     }
 
     constructor(canvas: HTMLCanvasElement, device: GPUDevice, chasers: number) {
@@ -47,8 +47,11 @@ export class Runner {
         });
         const chaserArray = new Float32Array(4 * chasers);
         for (let idx of [...Array(chasers).keys()]) {
-            chaserArray[idx * 4] = canvas.width / 2 + ((Math.random() - 0.5) * canvas.height) / 2;
-            chaserArray[idx * 4 + 1] = canvas.height / 2 + ((Math.random() - 0.5) * canvas.height) / 2;
+            const r = Math.sqrt(Math.random()) * Math.min(canvas.height, canvas.width) * 0.4;
+            const theta = Math.random() * Math.PI * 2;
+
+            chaserArray[idx * 4] = canvas.width / 2 + r * Math.sin(theta);
+            chaserArray[idx * 4 + 1] = canvas.height / 2 + r * Math.cos(theta);
             chaserArray[idx * 4 + 2] = Math.random() * Math.PI * 2;
             chaserArray[idx * 4 + 3] = 0.0; // Pad out block of 16 to match struct array layout
         }
@@ -89,7 +92,7 @@ export class Runner {
         const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();
 
         this.background_computer.render(commandEncoder, this.canvas.width, this.canvas.height);
-        this.chaser_computer.render(commandEncoder, this.chasers);
+        this.chaser_computer.render(commandEncoder, this.chasers / 1000, 1000);
         this.draw_computer.render(commandEncoder, this.canvas.width, this.canvas.height);
         this.texturer.render(commandEncoder, this.context.getCurrentTexture().createView());
 

@@ -36,7 +36,7 @@ const velocity = 20;
 @compute @workgroup_size(1,1,1)
 fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let screen_size = textureDimensions(colour_buffer);
-    let id = i32(GlobalInvocationID.x);
+    let id = i32(GlobalInvocationID.x * 1000 + GlobalInvocationID.y);
 
     let left = sample_data_at_location(
         chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading - radians(60)),

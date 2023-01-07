@@ -2,7 +2,9 @@ import { Runner } from "./runner";
 
 export class WebGPUSimulation {
     static async from(chasers: number, canvas: HTMLCanvasElement) {
-        const runner = await Runner.from(canvas, chasers);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const runner = await Runner.from(canvas, Math.round(chasers / 1000));
         return new WebGPUSimulation(runner);
     }
 
