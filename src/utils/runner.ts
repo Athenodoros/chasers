@@ -1,6 +1,6 @@
 export const runSimulationInLoop = (simulation: { update: (dt: number) => void }) => {
     const fpsDisplayDiv = document.getElementById("display") as HTMLDivElement;
-    let fps = 0;
+    let fps = 90;
 
     let previous = -1;
     const getAnimationFrame = (timestamp: number) => {

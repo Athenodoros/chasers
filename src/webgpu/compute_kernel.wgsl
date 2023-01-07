@@ -30,8 +30,8 @@ fn fade_values(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     put_value_at_point(value * alpha(), point);
 }
 
-const acc = 2;
-const velocity = 20;
+const acc = 5;
+const velocity = 40;
 
 @compute @workgroup_size(1,1,1)
 fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
@@ -51,9 +51,11 @@ fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec
         chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading + radians(60))
     );
 
+    // chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * acc * timestamp.dt;
     if (center >= left && center >= right) {
         chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * acc * timestamp.dt;
-    } else if (left >= center && left >= right) {
+    }
+    else if (left >= center && left >= right) {
         chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * acc * timestamp.dt;
     } else if (right >= center && right >= left) {
         chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * acc * timestamp.dt;
@@ -119,7 +121,7 @@ fn prng(id: u32, point: vec2<f32>) -> f32 {
     return x % 1000 / 1000;
 }
 
-const range: f32 = 5.0;
+const range: f32 = 3.0;
 fn sample_data_at_location(xf: f32, yf: f32) -> f32 {
     var total = 0.0;
 
