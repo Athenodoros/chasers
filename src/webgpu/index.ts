@@ -1,19 +1,18 @@
 import { Runner } from "./runner";
 
-export const runWebGPU = async (canvas: HTMLCanvasElement) => {
-    canvas.width = 800;
-    canvas.height = 600;
+export class WebGPUSimulation {
+    static async from(chasers: number, canvas: HTMLCanvasElement) {
+        const runner = await Runner.from(canvas, chasers);
+        return new WebGPUSimulation(runner);
+    }
 
-    const renderer = await Runner.from(canvas);
+    runner: Runner;
 
-    let previous = new Date().valueOf();
-    const render = () => {
-        let next = new Date().valueOf();
-        renderer.render(next - previous);
-        previous = next;
+    constructor(runner: Runner) {
+        this.runner = runner;
+    }
 
-        requestAnimationFrame(render);
-    };
-    render();
-    canvas.setAttribute("style", "image-rendering: pixelated");
-};
+    update(dt: number) {
+        this.runner.render(dt);
+    }
+}

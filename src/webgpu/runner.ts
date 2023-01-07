@@ -81,9 +81,9 @@ export class Runner {
     time: number = new Date().valueOf();
 
     render = (dt: number) => {
-        this.time += dt;
+        this.time += dt * 1000;
 
-        const array = new Float32Array([dt / 1000, this.time]);
+        const array = new Float32Array([dt, this.time]);
         this.device.queue.writeBuffer(this.uniformBuffer, 0, array);
 
         const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();

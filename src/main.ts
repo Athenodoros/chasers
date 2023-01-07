@@ -1,11 +1,10 @@
 // import { CanvasSimulation } from "./canvas";
 import "./style.css";
-// import { runSimulationInLoop } from "./utils/runner";
-import { runWebGPU } from "./webgpu";
-
-// const simulation = new CanvasSimulation(2000, document.getElementById("canvas") as HTMLCanvasElement);
-// runSimulationInLoop(simulation);
-// (window as any).simulation = simulation;
+import { runSimulationInLoop } from "./utils/runner";
+import { WebGPUSimulation } from "./webgpu";
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-runWebGPU(canvas);
+
+const simulation = await WebGPUSimulation.from(200, canvas);
+runSimulationInLoop(simulation);
+(window as any).simulation = simulation;
