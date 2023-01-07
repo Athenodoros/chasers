@@ -9,7 +9,7 @@ interface BufferBindEntry {
     binding: GPUBufferBindingType;
 }
 
-type BindEntry = TextureBindEntry | BufferBindEntry;
+export type BindEntry = TextureBindEntry | BufferBindEntry;
 
 export class ComputeShader {
     pipeline: GPUComputePipeline;
