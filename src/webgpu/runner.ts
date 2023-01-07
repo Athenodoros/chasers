@@ -16,7 +16,7 @@ export class Runner {
 
     uniformBuffer: GPUBuffer;
 
-    static async from(canvas: HTMLCanvasElement, chasers: number = 100) {
+    static async from(canvas: HTMLCanvasElement, chasers: number = 1000) {
         const adapter = await navigator.gpu?.requestAdapter();
         const device = await adapter?.requestDevice();
 
@@ -61,7 +61,7 @@ export class Runner {
         device.queue.writeBuffer(
             valueBuffer,
             0,
-            new Float32Array([...Array(4 * canvas.width * canvas.height).map(() => 1.0)])
+            new Float32Array([...Array(4 * canvas.width * canvas.height).map(() => 0.0)])
         );
 
         const bindings: BindEntry[] = [

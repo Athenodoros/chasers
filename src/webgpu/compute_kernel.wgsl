@@ -30,38 +30,37 @@ fn fade_values(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     put_value_at_point(value * alpha(), point);
 }
 
-const acc = 0.0000;
-const velocity = 50;
+const acc = 2;
+const velocity = 20;
 
 @compute @workgroup_size(1,1,1)
 fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let screen_size = textureDimensions(colour_buffer);
     let id = i32(GlobalInvocationID.x);
 
-    // let left = sample_data_at_location(
-    //     chasers.chasers[id].position.x + 20 * cos(chasers.chasers[id].heading - radians(60)),
-    //     chasers.chasers[id].position.y + 20 * sin(chasers.chasers[id].heading - radians(60))
-    // );
-    // let center = sample_data_at_location(
-    //     chasers.chasers[id].position.x + 20 * cos(chasers.chasers[id].heading),
-    //     chasers.chasers[id].position.y + 20 * sin(chasers.chasers[id].heading)
-    // );
-    // let right = sample_data_at_location(
-    //     chasers.chasers[id].position.x + 20 * cos(chasers.chasers[id].heading + radians(60)),
-    //     chasers.chasers[id].position.y + 20 * sin(chasers.chasers[id].heading + radians(60))
-    // );
+    let left = sample_data_at_location(
+        chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading - radians(60)),
+        chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading - radians(60))
+    );
+    let center = sample_data_at_location(
+        chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading),
+        chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading)
+    );
+    let right = sample_data_at_location(
+        chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading + radians(60)),
+        chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading + radians(60))
+    );
 
-    // if (center > left && center > right) {
-    // } else if (left >= center && left >= right) {
-    //     chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) + 0.5) * acc * timestamp.dt;
-    // } else if (right >= center && right >= left) {
-    //     chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, chasers.chasers[id].position) + 0.5) * acc * timestamp.dt;
-    // }
+    if (center >= left && center >= right) {
+        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * acc * timestamp.dt;
+    } else if (left >= center && left >= right) {
+        chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * acc * timestamp.dt;
+    } else if (right >= center && right >= left) {
+        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * acc * timestamp.dt;
+    }
 
-    chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) + 0.5) * acc * timestamp.dt;
-
-    chasers.chasers[id].position.x += velocity * timestamp.dt * cos(chasers.chasers[id].heading);
-    chasers.chasers[id].position.y += velocity * timestamp.dt * sin(chasers.chasers[id].heading);
+    chasers.chasers[id].position.x += velocity * timestamp.dt * sin(chasers.chasers[id].heading);
+    chasers.chasers[id].position.y += velocity * timestamp.dt * cos(chasers.chasers[id].heading);
 
     if (chasers.chasers[id].position.x < 0.0) {
         chasers.chasers[id].position.x = 0.0;
@@ -81,20 +80,9 @@ fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec
 
 @compute @workgroup_size(1,1,1)
 fn draw_to_texture(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
-    let colour = vec4<f32>(
-        get_value_at_point(GlobalInvocationID.xy),
-        0,
-        // 1,
-        9 * sample_3x3_at_location(GlobalInvocationID.x, GlobalInvocationID.y),
-        // sample_data_at_location(f32(GlobalInvocationID.x), f32(GlobalInvocationID.y)),
-        1
-    );
-
-    // let value = get_value_at_point(GlobalInvocationID.xy);
-    // let value = sample_data_at_location(f32(GlobalInvocationID.x), f32(GlobalInvocationID.y));
-    // let colour = value * foreground + (1.0 - value) * background;
-
-    textureStore(colour_buffer, GlobalInvocationID.xy, colour);
+    let value = get_value_at_point(GlobalInvocationID.xy);
+    let colour = value * foreground + (1.0 - value) * background;
+    textureStore(colour_buffer, vec2<u32>(GlobalInvocationID.x, textureDimensions(colour_buffer).y - GlobalInvocationID.y), colour);
 }
 
 // Helpers
@@ -113,54 +101,43 @@ fn get_index_of_point(point: vec2<u32>) -> u32 {
 }
 
 fn alpha() -> f32 {
-    return pow(0.99, timestamp.dt * 100);
+    return pow(0.99, timestamp.dt * 200);
 }
 
 fn radial(r: f32, angle: f32) -> vec2<f32> {
     return vec2<f32>(r * cos(angle), r * sin(angle));
 }
 
-const a = 48271.0;
-const m = 2147483647.0; // 2 ^ 31 - 1
+const a = 75.0;
+const m = 65537.0;
 fn prng(id: u32, point: vec2<f32>) -> f32 {
-    return a * timestamp.time * f32(id + 1) * point.x * point.y % m % 1000 / 1000;
+    var x = a;
+    x = x * timestamp.time % m;
+    x = x * f32(id + 1) % m;
+    x = x * point.x % m;
+    x = x * point.y % m;
+    return x % 1000 / 1000;
 }
 
-const range: i32 = 1;
-fn sample_data_at_location(xf: u32, yf: u32) -> f32 {
-    let point = vec2<i32>(i32(xf), i32(yf));
+const range: f32 = 5.0;
+fn sample_data_at_location(xf: f32, yf: f32) -> f32 {
     var total = 0.0;
 
-    for (var dx: i32 = -range; dx <= range; dx++) {
-        for (var dy: i32 = -range; dy <= range; dy++) {
-            let test = vec2<i32>(point.x + dx, point.y + dy);
+    for (var dx: f32 = -range; dx <= range; dx += 1.0) {
+        for (var dy: f32 = -range; dy <= range; dy += 1.0) {
             if (
-                test.x < 0 ||
-                test.x >= i32(textureDimensions(colour_buffer).x) ||
-                test.y < 0 ||
-                test.y >= i32(textureDimensions(colour_buffer).y)
+                xf + dx < 0 ||
+                xf + dx >= f32(textureDimensions(colour_buffer).x) ||
+                yf + dy < 0 ||
+                yf + dy >= f32(textureDimensions(colour_buffer).y)
             ) {
-                total += 0.0;
+                total -= 10.0;
             } else {
-                total += get_value_at_point(vec2<u32>(test));
+                total += max(0.0, get_value_at_point(vec2<u32>(u32(xf + dx), u32(yf + dy))));
             }
         }
     }
 
     let count = pow(f32(2 * range + 1), 2.0);
     return total / count;
-}
-
-fn sample_3x3_at_location(x: u32, y: u32) -> f32 {
-    return (
-        get_value_at_point(vec2<u32>(x - 1, y - 1)) +
-        get_value_at_point(vec2<u32>(x - 1, y)) +
-        get_value_at_point(vec2<u32>(x - 1, y + 1)) +
-        get_value_at_point(vec2<u32>(x, y - 1)) +
-        get_value_at_point(vec2<u32>(x, y)) +
-        get_value_at_point(vec2<u32>(x, y + 1)) +
-        get_value_at_point(vec2<u32>(x + 1, y - 1)) +
-        get_value_at_point(vec2<u32>(x + 1, y)) +
-        get_value_at_point(vec2<u32>(x + 1, y + 1))
-    ) / 9;
 }

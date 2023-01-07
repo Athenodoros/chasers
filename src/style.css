@@ -12,5 +12,5 @@ body {
 
 #canvas {
     position: absolute;
-    image-rendering: pixelated;
+    /* image-rendering: pixelated; */
 }

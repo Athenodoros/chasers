@@ -15,4 +15,5 @@ export const runWebGPU = async (canvas: HTMLCanvasElement) => {
         requestAnimationFrame(render);
     };
     render();
+    canvas.setAttribute("style", "image-rendering: pixelated");
 };
