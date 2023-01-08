@@ -52,7 +52,7 @@ export class Runner {
 
             chaserArray[idx * 4] = canvas.width / 2 + r * Math.sin(theta);
             chaserArray[idx * 4 + 1] = canvas.height / 2 + r * Math.cos(theta);
-            chaserArray[idx * 4 + 2] = Math.random() * Math.PI * 2;
+            chaserArray[idx * 4 + 2] = (Math.PI + theta) % (Math.PI * 2);
             chaserArray[idx * 4 + 3] = 0.0; // Pad out block of 16 to match struct array layout
         }
         device.queue.writeBuffer(chaserBuffer, 0, chaserArray);

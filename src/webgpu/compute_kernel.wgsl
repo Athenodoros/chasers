@@ -27,11 +27,14 @@ const foreground = vec4<f32>(224.0 / 255, 231.0 / 255, 255.0 / 255, 1);
 fn fade_values(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let point = GlobalInvocationID.xy;
     var value = get_value_at_point(point);
+    if (value < 0.001) {
+        value = 0;
+    }
     put_value_at_point(value * alpha(), point);
 }
 
-const acc = 5;
-const velocity = 40;
+const acc = 7;
+const velocity = 70;
 
 @compute @workgroup_size(1,1,1)
 fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
@@ -121,7 +124,7 @@ fn prng(id: u32, point: vec2<f32>) -> f32 {
     return x % 1000 / 1000;
 }
 
-const range: f32 = 3.0;
+const range: f32 = 2.0;
 fn sample_data_at_location(xf: f32, yf: f32) -> f32 {
     var total = 0.0;
 
