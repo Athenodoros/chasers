@@ -1,11 +1,18 @@
 @group(0) @binding(0) var colour_buffer: texture_storage_2d<rgba8unorm, write>;
-@group(0) @binding(1) var<uniform> timestamp: Timestamp;
+@group(0) @binding(1) var<uniform> scene: Scene;
 @group(0) @binding(2) var<storage, read_write> chasers: ChaserData;
 @group(0) @binding(3) var<storage, read_write> values: ValueData;
 
-struct Timestamp {
+struct Scene {
     dt: f32,
     time: f32,
+    width: f32,
+    height: f32,
+    acc: f32,
+    velocity: f32,
+    sensor: f32,
+    range: f32,
+    halflife: f32,
 }
 
 struct Chaser {
@@ -33,51 +40,46 @@ fn fade_values(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     put_value_at_point(value * alpha(), point);
 }
 
-const acc = 7;
-const velocity = 70;
-
 @compute @workgroup_size(1,1,1)
 fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
-    let screen_size = textureDimensions(colour_buffer);
     let id = i32(GlobalInvocationID.x * 1000 + GlobalInvocationID.y);
 
     let left = sample_data_at_location(
-        chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading - radians(60)),
-        chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading - radians(60))
+        chasers.chasers[id].position.x + scene.sensor * sin(chasers.chasers[id].heading - radians(60)),
+        chasers.chasers[id].position.y + scene.sensor * cos(chasers.chasers[id].heading - radians(60))
     );
     let center = sample_data_at_location(
-        chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading),
-        chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading)
+        chasers.chasers[id].position.x + scene.sensor * sin(chasers.chasers[id].heading),
+        chasers.chasers[id].position.y + scene.sensor * cos(chasers.chasers[id].heading)
     );
     let right = sample_data_at_location(
-        chasers.chasers[id].position.x + 10 * sin(chasers.chasers[id].heading + radians(60)),
-        chasers.chasers[id].position.y + 10 * cos(chasers.chasers[id].heading + radians(60))
+        chasers.chasers[id].position.x + scene.sensor * sin(chasers.chasers[id].heading + radians(60)),
+        chasers.chasers[id].position.y + scene.sensor * cos(chasers.chasers[id].heading + radians(60))
     );
 
-    // chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * acc * timestamp.dt;
     if (center >= left && center >= right) {
-        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * acc * timestamp.dt;
+        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * scene.acc * scene.dt;
     }
     else if (left >= center && left >= right) {
-        chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * acc * timestamp.dt;
+        chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * scene.acc * scene.dt;
     } else if (right >= center && right >= left) {
-        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * acc * timestamp.dt;
+        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * scene.acc * scene.dt;
     }
 
-    chasers.chasers[id].position.x += velocity * timestamp.dt * sin(chasers.chasers[id].heading);
-    chasers.chasers[id].position.y += velocity * timestamp.dt * cos(chasers.chasers[id].heading);
+    chasers.chasers[id].position.x += scene.velocity * scene.dt * sin(chasers.chasers[id].heading);
+    chasers.chasers[id].position.y += scene.velocity * scene.dt * cos(chasers.chasers[id].heading);
 
     if (chasers.chasers[id].position.x < 0.0) {
         chasers.chasers[id].position.x = 0.0;
     }
-    if (chasers.chasers[id].position.x > f32(screen_size.x)) {
-        chasers.chasers[id].position.x = f32(screen_size.x);
+    if (chasers.chasers[id].position.x > scene.width) {
+        chasers.chasers[id].position.x = scene.width;
     }
     if (chasers.chasers[id].position.y < 0.0) {
         chasers.chasers[id].position.y = 0.0;
     }
-    if (chasers.chasers[id].position.y > f32(screen_size.y)) {
-        chasers.chasers[id].position.y = f32(screen_size.y);
+    if (chasers.chasers[id].position.y > scene.height) {
+        chasers.chasers[id].position.y = scene.height;
     }
 
     put_value_at_point(1.0, vec2<u32>(chasers.chasers[id].position));
@@ -87,7 +89,7 @@ fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec
 fn draw_to_texture(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
     let value = get_value_at_point(GlobalInvocationID.xy);
     let colour = value * foreground + (1.0 - value) * background;
-    textureStore(colour_buffer, vec2<u32>(GlobalInvocationID.x, textureDimensions(colour_buffer).y - GlobalInvocationID.y), colour);
+    textureStore(colour_buffer, vec2<u32>(GlobalInvocationID.x, u32(scene.height) - GlobalInvocationID.y), colour);
 }
 
 // Helpers
@@ -101,12 +103,11 @@ fn get_value_at_point(point: vec2<u32>) -> f32 {
 }
 
 fn get_index_of_point(point: vec2<u32>) -> u32 {
-    let width = textureDimensions(colour_buffer).x;
-    return (point.y * width) + point.x;
+    return (point.y * u32(scene.width)) + point.x;
 }
 
 fn alpha() -> f32 {
-    return pow(0.99, timestamp.dt * 200);
+    return pow(scene.halflife, scene.dt);
 }
 
 fn radial(r: f32, angle: f32) -> vec2<f32> {
@@ -117,24 +118,23 @@ const a = 75.0;
 const m = 65537.0;
 fn prng(id: u32, point: vec2<f32>) -> f32 {
     var x = a;
-    x = x * timestamp.time % m;
+    x = x * scene.time % m;
     x = x * f32(id + 1) % m;
     x = x * point.x % m;
     x = x * point.y % m;
     return x % 1000 / 1000;
 }
 
-const range: f32 = 2.0;
 fn sample_data_at_location(xf: f32, yf: f32) -> f32 {
     var total = 0.0;
 
-    for (var dx: f32 = -range; dx <= range; dx += 1.0) {
-        for (var dy: f32 = -range; dy <= range; dy += 1.0) {
+    for (var dx: f32 = -scene.range; dx <= scene.range; dx += 1.0) {
+        for (var dy: f32 = -scene.range; dy <= scene.range; dy += 1.0) {
             if (
                 xf + dx < 0 ||
-                xf + dx >= f32(textureDimensions(colour_buffer).x) ||
+                xf + dx >= scene.width ||
                 yf + dy < 0 ||
-                yf + dy >= f32(textureDimensions(colour_buffer).y)
+                yf + dy >= scene.height
             ) {
                 total -= 10.0;
             } else {
@@ -143,6 +143,6 @@ fn sample_data_at_location(xf: f32, yf: f32) -> f32 {
         }
     }
 
-    let count = pow(f32(2 * range + 1), 2.0);
+    let count = pow(f32(2 * scene.range + 1), 2.0);
     return total / count;
 }

@@ -14,18 +14,35 @@ export class Runner {
     draw_computer: ComputeShader;
     texturer: TextureRendererShader;
 
-    uniformBuffer: GPUBuffer;
+    sceneBuffer: GPUBuffer;
 
-    static async from(canvas: HTMLCanvasElement, thousands: number) {
+    static async from(
+        canvas: HTMLCanvasElement,
+        thousands: number,
+        acceleration: number = 5,
+        velocity: number = 50,
+        sensor: number = 10,
+        range: number = 2,
+        halflife: number = 0.1
+    ) {
         const adapter = await navigator.gpu?.requestAdapter();
         const device = await adapter?.requestDevice();
 
         if (!device) throw new Error("No GPU device found!");
 
-        return new Runner(canvas, device, thousands * 1000);
+        return new Runner(canvas, device, thousands * 1000, acceleration, velocity, sensor, range, halflife);
     }
 
-    constructor(canvas: HTMLCanvasElement, device: GPUDevice, chasers: number) {
+    constructor(
+        canvas: HTMLCanvasElement,
+        device: GPUDevice,
+        chasers: number,
+        acceleration: number,
+        velocity: number,
+        sensor: number,
+        range: number,
+        halflife: number
+    ) {
         this.canvas = canvas;
         this.device = device;
         this.chasers = chasers;
@@ -39,7 +56,19 @@ export class Runner {
         // Assets
         const colourBufferView = getColourBufferView(device, canvas.width, canvas.height);
 
-        this.uniformBuffer = device.createBuffer({ size: 8, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+        this.sceneBuffer = device.createBuffer({ size: 36, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+        const sceneArray = new Float32Array([
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height,
+            acceleration,
+            velocity,
+            sensor,
+            range,
+            halflife,
+        ]);
+        device.queue.writeBuffer(this.sceneBuffer, 0, sceneArray);
 
         const chaserBuffer = device.createBuffer({
             size: 16 * chasers, // Blocks round up to multiple of 16 (from 2 * 4 + 4)
@@ -69,7 +98,7 @@ export class Runner {
 
         const bindings: BindEntry[] = [
             { type: "texture", view: colourBufferView },
-            { type: "buffer", buffer: this.uniformBuffer, binding: "uniform" },
+            { type: "buffer", buffer: this.sceneBuffer, binding: "uniform" },
             { type: "buffer", buffer: chaserBuffer, binding: "storage" },
             { type: "buffer", buffer: valueBuffer, binding: "storage" },
         ];
@@ -86,8 +115,7 @@ export class Runner {
     render = (dt: number) => {
         this.time += dt * 1000;
 
-        const array = new Float32Array([dt, this.time]);
-        this.device.queue.writeBuffer(this.uniformBuffer, 0, array);
+        this.device.queue.writeBuffer(this.sceneBuffer, 0, new Float32Array([dt, this.time]));
 
         const commandEncoder: GPUCommandEncoder = this.device.createCommandEncoder();
 
@@ -97,6 +125,22 @@ export class Runner {
         this.texturer.render(commandEncoder, this.context.getCurrentTexture().createView());
 
         this.device.queue.submit([commandEncoder.finish()]);
+    };
+
+    setAcceleration = (value: number) => {
+        this.device.queue.writeBuffer(this.sceneBuffer, 16, new Float32Array([value]));
+    };
+    setVelocity = (value: number) => {
+        this.device.queue.writeBuffer(this.sceneBuffer, 20, new Float32Array([value]));
+    };
+    setSensor = (value: number) => {
+        this.device.queue.writeBuffer(this.sceneBuffer, 24, new Float32Array([value]));
+    };
+    setRange = (value: number) => {
+        this.device.queue.writeBuffer(this.sceneBuffer, 28, new Float32Array([value]));
+    };
+    setHalflife = (value: number) => {
+        this.device.queue.writeBuffer(this.sceneBuffer, 32, new Float32Array([value]));
     };
 }
 

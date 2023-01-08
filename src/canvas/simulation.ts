@@ -4,7 +4,7 @@ import { Chaser } from "../utils/types";
 const CHASER_SPEED = 5;
 const TURN_SPEED = 10;
 
-export class Simulation {
+export class CanvasPhysicsSimulation {
     public list: Chaser[];
     public bounds: Vector2;
 
