@@ -58,12 +58,12 @@ fn update_and_draw_points(@builtin(global_invocation_id) GlobalInvocationID: vec
     );
 
     if (center >= left && center >= right) {
-        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 - 0.2) * scene.acc * scene.dt;
+        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, u32(scene.dt)) * 0.4 - 0.2) * scene.acc * scene.dt;
     }
     else if (left >= center && left >= right) {
-        chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * scene.acc * scene.dt;
+        chasers.chasers[id].heading -= (prng(GlobalInvocationID.x, u32(scene.dt)) * 0.4 + 0.8) * scene.acc * scene.dt;
     } else if (right >= center && right >= left) {
-        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, chasers.chasers[id].position) * 0.4 + 0.8) * scene.acc * scene.dt;
+        chasers.chasers[id].heading += (prng(GlobalInvocationID.x, u32(scene.dt)) * 0.4 + 0.8) * scene.acc * scene.dt;
     }
 
     chasers.chasers[id].position.x += scene.velocity * scene.dt * sin(chasers.chasers[id].heading);
@@ -114,15 +114,20 @@ fn radial(r: f32, angle: f32) -> vec2<f32> {
     return vec2<f32>(r * cos(angle), r * sin(angle));
 }
 
-const a = 75.0;
-const m = 65537.0;
-fn prng(id: u32, point: vec2<f32>) -> f32 {
-    var x = a;
-    x = x * scene.time % m;
-    x = x * f32(id + 1) % m;
-    x = x * point.x % m;
-    x = x * point.y % m;
-    return x % 1000 / 1000;
+// Hash function www.cs.ubc.ca/~rbridson/docs/schechter-sca08-turbulence.pdf
+const max_u32 = f32(4294967296); // 2 ^ 32;
+fn prng(id1: u32, id2: u32) -> f32 {
+    return f32(hash(hash(id1) * id2)) / max_u32;
+}
+fn hash(state: u32) -> u32 {
+    var result = state;
+    result ^= 2747636419;
+    result *= 2654435769;
+    result ^= result >> 16;
+    result *= 2654435769;
+    result ^= result >> 16;
+    result *= 2654435769;
+    return result;
 }
 
 fn sample_data_at_location(xf: f32, yf: f32) -> f32 {
