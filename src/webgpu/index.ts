@@ -6,11 +6,17 @@ export class WebGPUSimulation implements Simulation {
     chasers: number;
     controls: HTMLElement[];
 
+    acceleration: number;
+    velocity: number;
+    sensor: number;
+    range: number;
+    halflife: number;
+
     static async from(
         chasers: number,
         canvas: HTMLCanvasElement,
         acceleration: number = 5,
-        velocity: number = 50,
+        velocity: number = 200,
         sensor: number = 10,
         range: number = 2,
         halflife: number = 0.1
@@ -49,6 +55,12 @@ export class WebGPUSimulation implements Simulation {
         this.canvas = canvas;
         this.chasers = chasers;
 
+        this.acceleration = acceleration;
+        this.velocity = velocity;
+        this.sensor = sensor;
+        this.range = range;
+        this.halflife = halflife;
+
         const chasersInputWrapper = document.createElement("div");
         chasersInputWrapper.setAttribute("style", "display: flex");
         const chasersInput = document.createElement("input");
@@ -67,11 +79,26 @@ export class WebGPUSimulation implements Simulation {
 
         this.controls = [
             chasersInputWrapper,
-            getNumericController("Acceleration", acceleration, this.runner.setAcceleration),
-            getNumericController("Velocity", velocity, this.runner.setVelocity),
-            getNumericController("Sensor", sensor, this.runner.setSensor),
-            getNumericController("Range", range, this.runner.setRange),
-            getNumericController("Halflife", halflife, this.runner.setHalflife),
+            getNumericController("Acceleration", acceleration, (value) => {
+                this.acceleration = value;
+                this.runner.setAcceleration(value);
+            }),
+            getNumericController("Velocity", velocity, (value) => {
+                this.velocity = value;
+                this.runner.setVelocity(value);
+            }),
+            getNumericController("Sensor", sensor, (value) => {
+                this.sensor = value;
+                this.runner.setSensor(value);
+            }),
+            getNumericController("Range", range, (value) => {
+                this.range = value;
+                this.runner.setRange(value);
+            }),
+            getNumericController("Halflife", halflife, (value) => {
+                this.halflife = value;
+                this.runner.setHalflife(value);
+            }),
         ];
     }
 
@@ -80,7 +107,15 @@ export class WebGPUSimulation implements Simulation {
     }
 
     restart() {
-        Runner.from(this.canvas, Math.max(Math.round(this.chasers / 1000), 1)).then((runner) => (this.runner = runner));
+        Runner.from(
+            this.canvas,
+            Math.max(Math.round(this.chasers / 1000), 1),
+            this.acceleration,
+            this.velocity,
+            this.sensor,
+            this.range,
+            this.halflife
+        ).then((runner) => (this.runner = runner));
     }
 }
 

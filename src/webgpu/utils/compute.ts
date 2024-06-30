@@ -1,21 +1,23 @@
-interface TextureBindEntry {
-    type: "texture";
-    view: GPUTextureView;
+export module ComputeShaderRunner {
+    export type Binding = TextureBinding | BufferBinding;
+
+    export interface BufferBinding {
+        type: "buffer";
+        buffer: GPUBuffer;
+        binding: GPUBufferBindingType;
+    }
+
+    export interface TextureBinding {
+        type: "texture";
+        view: GPUTextureView;
+    }
 }
 
-interface BufferBindEntry {
-    type: "buffer";
-    buffer: GPUBuffer;
-    binding: GPUBufferBindingType;
-}
-
-export type BindEntry = TextureBindEntry | BufferBindEntry;
-
-export class ComputeShader {
+export class ComputeShaderRunner {
     pipeline: GPUComputePipeline;
     bind_group: GPUBindGroup;
 
-    constructor(device: GPUDevice, code: string, entryPoint: string, bindings: BindEntry[]) {
+    constructor(device: GPUDevice, code: string, entryPoint: string, bindings: ComputeShaderRunner.Binding[]) {
         const bind_group_layout = device.createBindGroupLayout({
             entries: bindings.map((entry, idx) => ({
                 binding: idx,

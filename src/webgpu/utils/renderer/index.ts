@@ -1,10 +1,10 @@
-import code from "./screen_shader.wgsl";
+import code from "./shader.wgsl";
 
 export class TextureRendererShader {
     pipeline: GPURenderPipeline;
     bind_group: GPUBindGroup;
 
-    constructor(device: GPUDevice, view: GPUTextureView) {
+    constructor(device: GPUDevice, source: GPUTextureView) {
         const samplerDescriptor: GPUSamplerDescriptor = {
             addressModeU: "repeat",
             addressModeV: "repeat",
@@ -33,7 +33,7 @@ export class TextureRendererShader {
             layout: bind_group_layout,
             entries: [
                 { binding: 0, resource: sampler },
-                { binding: 1, resource: view },
+                { binding: 1, resource: source },
             ],
         });
 
@@ -54,9 +54,9 @@ export class TextureRendererShader {
         });
     }
 
-    render = (commandEncoder: GPUCommandEncoder, textureView: GPUTextureView) => {
+    render = (commandEncoder: GPUCommandEncoder, target: GPUTextureView) => {
         const renderpass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
-            colorAttachments: [{ view: textureView, loadOp: "clear", storeOp: "store" }],
+            colorAttachments: [{ view: target, loadOp: "clear", storeOp: "store" }],
         });
         renderpass.setPipeline(this.pipeline);
         renderpass.setBindGroup(0, this.bind_group);
